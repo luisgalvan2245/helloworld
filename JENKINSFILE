@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+    stages {
+        stage('Get Code') {
+            steps {
+                echo 'Downloading source code'
+                git 'https://github.com/luisgalvan2245/helloworld.git'
+                sh 'ls -la'
+                echo WORKSPACE
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Building app'
+            }
+        }
+        stage('Tests') {
+            parallel {
+                stage('Unit') {
+                    steps {
+                        sh '''
+                            export PYTHONPATH=$WORKSPACE
+                            pytest --junitxml=results-unit.xml test/unit
+                        '''
+                    }
+                }
+                stage('Service') {
+                    steps {
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            sh '''
+                                export FLASK_APP=app/api.py
+                                export FLASK_ENV=development
+
+                                # Start Flask app in the background and log output
+                                nohup flask run > flask.log 2>&1 &
+
+                                echo "Downloading WireMock..."
+                                if [ ! -f wiremock-standalone-3.13.0.jar ]; then
+                                    curl -sSfLo wiremock-standalone-3.13.0.jar \
+                                    https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.13.0/wiremock-standalone-3.13.0.jar || exit 1
+                                fi
+
+                                # Start WireMock and log output
+                                nohup java -jar wiremock-standalone-3.13.0.jar --port 9090 --root-dir test/wiremock > wiremock.log 2>&1 &
+
+                                echo "Waiting for WireMock to respond on port 9090..."
+                                timeout 20 bash -c 'until nc -z localhost 9090; do sleep 1; done'
+                                
+                                pytest --junitxml=results-rest.xml test/rest
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        stage('Results') {
+            steps {
+                junit 'results*.xml'
+            }
+        }
+    }
+}
