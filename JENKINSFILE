@@ -44,7 +44,7 @@ pipeline {
                                 nohup java -jar wiremock-standalone-3.13.0.jar --port 9090 --root-dir test/wiremock > wiremock.log 2>&1 &
 
                                 echo "Waiting for WireMock to respond on port 9090..."
-                                timeout 20 bash -c 'until nc -z localhost 9090; do sleep 1; done'
+                                timeout 20 sh -c 'until nc -z localhost 9090; do sleep 1; done'
                                 
                                 pytest --junitxml=results-rest.xml test/rest
                             '''
