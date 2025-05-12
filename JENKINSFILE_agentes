@@ -1,0 +1,87 @@
+pipeline {
+    agent none
+
+    stages {
+        stage('Get Code') {
+            agent { label 'python' }
+            steps {
+                echo "=== AGENT ==="
+                sh 'whoami && hostname'
+
+                echo 'Downloading source code'
+                git 'https://github.com/luisgalvan2245/helloworld.git'
+
+                sh 'ls -la'
+                echo WORKSPACE
+
+                stash name: 'src', includes: '**'
+            }
+        }
+        stage('Build') {
+            agent { label 'python' }
+            steps {
+                echo "=== AGENT ==="
+                sh 'whoami && hostname'
+
+                echo 'Building app'
+            }
+        }
+        stage('Tests') {
+            parallel {
+                stage('Unit') {
+                    agent { label 'python' }
+                    steps {
+                        echo "=== AGENT ==="
+                        sh 'whoami && hostname'
+
+                        unstash 'src'
+                        sh '''
+                            export PYTHONPATH=$WORKSPACE
+                            pytest -q --junitxml=results-unit.xml test/unit
+                        '''
+                        stash name: 'unit-results', includes: 'results-unit.xml'
+                    }
+                }
+
+                stage('Service') {
+                    agent { label 'python' }   // nodo con Python + Java (para WireMock)
+                    steps {
+                        echo "=== SERVICE AGENT ==="
+                        sh 'whoami && hostname'
+
+                        unstash 'src'
+                        sh '''
+                            export PYTHONPATH=$WORKSPACE
+                            export FLASK_APP=app/api.py
+
+                            # Start Flask app in the background and log output
+                            nohup flask run >/dev/null 2>&1 &
+
+                            echo "Downloading WireMock..."
+                            curl -sSfLo wiremock-standalone-3.13.0.jar \
+                            https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.13.0/wiremock-standalone-3.13.0.jar || exit 1
+
+                            # Start WireMock in the background and log output
+                            nohup java -jar wiremock-standalone-3.13.0.jar --port 9090 --root-dir test/wiremock > wiremock.log 2>&1 &
+                            
+                            pytest --junitxml=results-rest.xml test/rest
+                        '''
+                        stash name: 'service-results', includes: 'results-rest.xml'
+                    }
+                }
+            }
+        }
+        stage('Results') {
+            agent { label 'python' }
+            steps {
+                echo "=== AGENT ==="
+                sh 'whoami && hostname'
+
+                unstash 'unit-results'
+                unstash 'service-results'
+
+                junit 'results-*.xml'
+            }
+        }
+    }
+}

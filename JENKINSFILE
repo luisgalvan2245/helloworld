@@ -6,6 +6,7 @@ pipeline {
             steps {
                 echo 'Downloading source code'
                 git 'https://github.com/luisgalvan2245/helloworld.git'
+                
                 sh 'ls -la'
                 echo WORKSPACE
             }
