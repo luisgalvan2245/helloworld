@@ -3,7 +3,7 @@ pipeline {
 
     stages {
         stage('Get Code') {
-            agent { label 'python' }
+            agent { label 'linux' }
             steps {
                 echo "=== AGENT ==="
                 sh 'whoami && hostname'
@@ -18,7 +18,7 @@ pipeline {
             }
         }
         stage('Build') {
-            agent { label 'python' }
+            agent { label 'linux' }
             steps {
                 echo "=== AGENT ==="
                 sh 'whoami && hostname'
@@ -75,7 +75,7 @@ pipeline {
             }
         }
         stage('Results') {
-            agent { label 'python' }
+            agent { label 'linux' }
             steps {
                 echo "=== AGENT ==="
                 sh 'whoami && hostname'
