@@ -31,3 +31,26 @@ def substract(op_1, op_2):
         return ("{}".format(CALCULATOR.substract(num_1, num_2)), http.client.OK, HEADERS)
     except TypeError as e:
         return (str(e), http.client.BAD_REQUEST, HEADERS)
+
+# ---------- NEW ENDPOINTS ---------- #
+
+@api_application.route("/calc/multiply/<op_1>/<op_2>", methods=["GET"])
+def multiply(op_1, op_2):
+    try:
+        n1, n2 = util.convert_to_number(op_1), util.convert_to_number(op_2)
+        return (f"{CALCULATOR.multiply(n1, n2)}", http.client.OK, HEADERS)
+    except TypeError as e:
+        return (str(e), http.client.BAD_REQUEST, HEADERS)
+
+
+@api_application.route("/calc/divide/<op_1>/<op_2>", methods=["GET"])
+def divide(op_1, op_2):
+    try:
+        n1, n2 = util.convert_to_number(op_1), util.convert_to_number(op_2)
+        return (f"{CALCULATOR.divide(n1, n2)}", http.client.OK, HEADERS)
+    except ZeroDivisionError as e:
+        # Zero division error → 406 Not Acceptable
+        return (str(e), http.client.NOT_ACCEPTABLE, HEADERS)
+    except TypeError as e:
+        return (str(e), http.client.BAD_REQUEST, HEADERS)
+    
