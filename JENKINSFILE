@@ -1,6 +1,6 @@
 pipeline {
-    agent { label 'linux'}
-    
+    agent { label 'python'}
+
     stages {
         stage('Get Code') {
             steps {
@@ -41,7 +41,7 @@ pipeline {
                                     https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.13.0/wiremock-standalone-3.13.0.jar || exit 1
                                 fi
 
-                                # Start WireMock and log output
+                                # Start WireMock in the background and log output
                                 nohup java -jar wiremock-standalone-3.13.0.jar --port 9090 --root-dir test/wiremock > wiremock.log 2>&1 &
 
                                 echo "Waiting for WireMock to respond on port 9090..."
