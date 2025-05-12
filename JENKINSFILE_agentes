@@ -22,6 +22,7 @@ pipeline {
             steps {
                 echo "=== AGENT ==="
                 sh 'whoami && hostname'
+                echo WORKSPACE
 
                 echo 'Building app'
             }
@@ -33,6 +34,7 @@ pipeline {
                     steps {
                         echo "=== AGENT ==="
                         sh 'whoami && hostname'
+                        echo WORKSPACE
 
                         unstash 'src'
                         sh '''
@@ -46,8 +48,9 @@ pipeline {
                 stage('Service') {
                     agent { label 'python' }   // nodo con Python + Java (para WireMock)
                     steps {
-                        echo "=== SERVICE AGENT ==="
+                        echo "=== AGENT ==="
                         sh 'whoami && hostname'
+                        echo WORKSPACE
 
                         unstash 'src'
                         sh '''
@@ -76,6 +79,7 @@ pipeline {
             steps {
                 echo "=== AGENT ==="
                 sh 'whoami && hostname'
+                echo WORKSPACE
 
                 unstash 'unit-results'
                 unstash 'service-results'
