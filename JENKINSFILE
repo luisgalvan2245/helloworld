@@ -51,7 +51,6 @@ pipeline {
                     }
                 }
 
-
                 stage('Static') {
                     steps {
                         sh '''
@@ -96,10 +95,9 @@ pipeline {
         stage('Coverage') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh '''
-                        coverage xml
-                    '''
-
+                    sh 'coverage xml'
+                }
+            }
             post {
                 always {
                     recordCoverage(
