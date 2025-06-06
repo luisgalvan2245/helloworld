@@ -20,13 +20,15 @@ pipeline {
             parallel {
                 stage('Unit') {
                     steps {
-                        sh '''
-                            export PYTHONPATH=$WORKSPACE
-                            pytest --junitxml=results-unit.xml test/unit
-                        '''
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            sh '''
+                                export PYTHONPATH=$WORKSPACE
+                                pytest --junitxml=results-unit.xml test/unit
+                            '''
+                        }
                     }
                 }
-                stage('Service') {
+                stage('Rest') {
                     steps {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                             sh '''

@@ -1,6 +1,8 @@
 pipeline {
     agent none
 
+    options { skipDefaultCheckout() }
+
     stages {
         stage('Get Code') {
             agent { label 'linux' }
@@ -14,7 +16,7 @@ pipeline {
                 sh 'ls -la'
                 echo WORKSPACE
 
-                stash name: 'src', includes: '**'
+                stash name: 'code', includes: '**'
             }
         }
         stage('Build') {
@@ -32,46 +34,50 @@ pipeline {
                 stage('Unit') {
                     agent { label 'python' }
                     steps {
-                        echo "=== AGENT ==="
-                        sh 'whoami && hostname'
-                        echo WORKSPACE
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            echo "=== AGENT ==="
+                            sh 'whoami && hostname'
+                            echo WORKSPACE
 
-                        unstash 'src'
-                        sh '''
-                            export PYTHONPATH=$WORKSPACE
-                            pytest -q --junitxml=results-unit.xml test/unit
-                        '''
-                        stash name: 'unit-results', includes: 'results-unit.xml'
+                            unstash 'code'
+                            sh '''
+                                export PYTHONPATH=$WORKSPACE
+                                pytest -q --junitxml=results-unit.xml test/unit
+                            '''
+                            stash name: 'unit-results', includes: 'results-unit.xml'
+                        }
                     }
                 }
 
-                stage('Service') {
+                stage('Rest') {
                     agent { label 'python' }   // nodo con Python + Java (para WireMock)
                     steps {
-                        echo "=== AGENT ==="
-                        sh 'whoami && hostname'
-                        echo WORKSPACE
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            echo "=== AGENT ==="
+                            sh 'whoami && hostname'
+                            echo WORKSPACE
 
-                        unstash 'src'
-                        sh '''
-                            export PYTHONPATH=$WORKSPACE
-                            export FLASK_APP=app/api.py
+                            unstash 'code'
+                            sh '''
+                                export PYTHONPATH=$WORKSPACE
+                                export FLASK_APP=app/api.py
 
-                            echo "Starting Flask app..."
-                            nohup flask run >/dev/null 2>&1 &
+                                echo "Starting Flask app..."
+                                nohup flask run >/dev/null 2>&1 &
 
-                            echo "Starting WireMock..."
-                            nohup java -jar /usr/local/bin/wiremock-standalone-3.13.0.jar --port 9090 \
-                            --root-dir test/wiremock > wiremock.log 2>&1 &
+                                echo "Starting WireMock..."
+                                nohup java -jar /usr/local/bin/wiremock-standalone-3.13.0.jar --port 9090 \
+                                --root-dir test/wiremock > wiremock.log 2>&1 &
 
-                            timeout 30 sh -c '
-                                while ! nc -z localhost 5000; do echo "Waiting for Flask..."; sleep 1; done
-                                while ! nc -z localhost 9090; do echo "Waiting for WireMock..."; sleep 1; done
-                            '
+                                timeout 30 sh -c '
+                                    while ! nc -z localhost 5000; do echo "Waiting for Flask..."; sleep 1; done
+                                    while ! nc -z localhost 9090; do echo "Waiting for WireMock..."; sleep 1; done
+                                '
 
-                            pytest --junitxml=results-rest.xml test/rest
-                        '''
-                        stash name: 'service-results', includes: 'results-rest.xml'
+                                pytest --junitxml=results-rest.xml test/rest
+                                '''
+                                stash name: 'rest-results', includes: 'results-rest.xml'
+                        }
                     }
                 }
             }
@@ -84,9 +90,9 @@ pipeline {
                 echo WORKSPACE
 
                 unstash 'unit-results'
-                unstash 'service-results'
+                unstash 'rest-results'
 
-                junit 'results-*.xml'
+                junit 'result-*.xml'
             }
         }
     }
