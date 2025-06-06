@@ -99,6 +99,9 @@ pipeline {
                     sh '''
                         coverage xml
                     '''
+
+            post {
+                always {
                     recordCoverage(
                         tools: [[parser: 'COBERTURA', pattern: 'coverage.xml']],
                         qualityGates: [
