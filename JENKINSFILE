@@ -19,7 +19,7 @@ pipeline {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                             sh '''
                                 export PYTHONPATH=$WORKSPACE
-                                pytest --junitxml=results-unit.xml test/unit
+                                coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest test/unit --junitxml=results-unit.xml
                             '''
                             junit 'results-unit.xml'
                         }
@@ -57,8 +57,6 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                        export PYTHONPATH=$WORKSPACE
-                        coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest test/unit
                         coverage xml
                     '''
                     recordCoverage(
@@ -90,7 +88,7 @@ pipeline {
         stage('Security') {
             steps {
                 sh '''
-                    bandit --exit-zero -r . -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
+                    bandit --exit-zero -r . -f custom -o bandit.out --msg-template "{abspath}:{line}: [test_id] {msg}"
                 '''
                 recordIssues(
                     tools: [pyLint(name: 'bandit', pattern: 'bandit.out')],
@@ -104,10 +102,9 @@ pipeline {
 
         stage('Performance') {
             steps {
-               sh '''
+                sh '''
                     jmeter -n -t test/jmeter/flask.jmx -f -l flask.jtl
                 '''
-
                 perfReport sourceDataFiles: 'flask.jtl'
             }
         }
