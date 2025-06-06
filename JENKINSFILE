@@ -21,6 +21,7 @@ pipeline {
                                 export PYTHONPATH=$WORKSPACE
                                 pytest --junitxml=results-unit.xml test/unit
                             '''
+                            junit 'results-unit.xml'
                         }
                     }
                 }
@@ -45,6 +46,7 @@ pipeline {
 
                                 pytest --junitxml=results-rest.xml test/rest
                             '''
+                            junit 'results-rest.xml'
                         }
                     }
                 }
@@ -88,6 +90,25 @@ pipeline {
                 '''
 
                 perfReport sourceDataFiles: 'flask.jtl'
+            }
+        }
+
+        stage('Coverage') {
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    sh '''
+                        export PYTHONPATH=$WORKSPACE
+                        coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest test/unit
+                        coverage xml
+                    '''
+                    recordCoverage(
+                        tools: [[parser: 'COBERTURA', pattern: 'coverage.xml']],
+                        qualityGates: [
+                            [threshold: 99.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'NOTE'],
+                            [threshold: 60.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'NOTE'],
+                        ]
+                    )
+                }
             }
         }
     }
