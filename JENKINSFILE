@@ -50,6 +50,46 @@ pipeline {
                         }
                     }
                 }
+
+
+                stage('Static') {
+                    steps {
+                        sh '''
+                            flake8 --exit-zero --format=pylint app > flake8.out
+                        '''
+                        recordIssues(
+                            tools: [flake8(name: 'flake8', pattern: 'flake8.out')],
+                            qualityGates: [
+                                [threshold: 10, type: 'TOTAL', unstable: true],
+                                [threshold: 12, type: 'TOTAL', unstable: false],
+                            ]
+                        )
+                    }
+                }
+
+                stage('Security') {
+                    steps {
+                        sh '''
+                            bandit --exit-zero -r . -f custom -o bandit.out --msg-template "{abspath}:{line}: [test_id] {msg}"
+                        '''
+                        recordIssues(
+                            tools: [pyLint(name: 'bandit', pattern: 'bandit.out')],
+                            qualityGates: [
+                                [threshold: 1, type: 'TOTAL', unstable: true],
+                                [threshold: 2, type: 'TOTAL', unstable: false],
+                            ]
+                        )
+                    }
+                }
+
+                stage('Performance') {
+                    steps {
+                        sh '''
+                            jmeter -n -t test/jmeter/flask.jmx -f -l flask.jtl
+                        '''
+                        perfReport sourceDataFiles: 'flask.jtl'
+                    }
+                }
             }
         }
 
@@ -67,45 +107,6 @@ pipeline {
                         ]
                     )
                 }
-            }
-        }
-
-        stage('Static') {
-            steps {
-                sh '''
-                    flake8 --exit-zero --format=pylint app > flake8.out
-                '''
-                recordIssues(
-                    tools: [flake8(name: 'flake8', pattern: 'flake8.out')],
-                    qualityGates: [
-                        [threshold: 10, type: 'TOTAL', unstable: true],
-                        [threshold: 12, type: 'TOTAL', unstable: false],
-                    ]
-                )
-            }
-        }
-
-        stage('Security') {
-            steps {
-                sh '''
-                    bandit --exit-zero -r . -f custom -o bandit.out --msg-template "{abspath}:{line}: [test_id] {msg}"
-                '''
-                recordIssues(
-                    tools: [pyLint(name: 'bandit', pattern: 'bandit.out')],
-                    qualityGates: [
-                        [threshold: 1, type: 'TOTAL', unstable: true],
-                        [threshold: 2, type: 'TOTAL', unstable: false],
-                    ]
-                )
-            }
-        }
-
-        stage('Performance') {
-            steps {
-                sh '''
-                    jmeter -n -t test/jmeter/flask.jmx -f -l flask.jtl
-                '''
-                perfReport sourceDataFiles: 'flask.jtl'
             }
         }
     }
