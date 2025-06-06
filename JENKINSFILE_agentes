@@ -40,7 +40,7 @@ pipeline {
                 }
 
                 stage('Rest') {
-                    agent { label 'python' }   // nodo con Python + Java (para WireMock)
+                    agent { label 'python' }
                     steps {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                             echo "=== AGENT ==="
