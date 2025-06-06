@@ -1,59 +1,37 @@
 pipeline {
-    agent none
-
-    options { skipDefaultCheckout() }
+    agent { label 'python'}
 
     stages {
         stage('Get Code') {
-            agent { label 'linux' }
             steps {
-                echo "=== AGENT ==="
-                sh 'whoami && hostname'
-
                 echo 'Downloading source code'
                 git 'https://github.com/luisgalvan2245/helloworld.git'
 
                 sh 'ls -la'
                 echo WORKSPACE
-
-                stash name: 'code', includes: '**'
             }
         }
         stage('Tests') {
             parallel {
                 stage('Unit') {
-                    agent { label 'python' }
                     steps {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                            echo "=== AGENT ==="
-                            sh 'whoami && hostname'
-                            echo WORKSPACE
-
-                            unstash name: 'code'
                             sh '''
                                 export PYTHONPATH=$WORKSPACE
-                                pytest -q --junitxml=results-unit.xml test/unit
+                                pytest --junitxml=results-unit.xml test/unit
                             '''
-                            stash name: 'unit-results', includes: 'results-unit.xml'
                         }
                     }
                 }
-
                 stage('Rest') {
-                    agent { label 'python' }   // nodo con Python + Java (para WireMock)
                     steps {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                            echo "=== AGENT ==="
-                            sh 'whoami && hostname'
-                            echo WORKSPACE
-
-                            unstash name: 'code'
                             sh '''
-                                export PYTHONPATH=$WORKSPACE
                                 export FLASK_APP=app/api.py
+                                export FLASK_ENV=development
 
                                 echo "Starting Flask app..."
-                                nohup flask run >/dev/null 2>&1 &
+                                nohup flask run > flask.log 2>&1 &
 
                                 echo "Starting WireMock..."
                                 nohup java -jar /usr/local/bin/wiremock-standalone-3.13.0.jar --port 9090 \
@@ -65,24 +43,15 @@ pipeline {
                                 '
 
                                 pytest --junitxml=results-rest.xml test/rest
-                                '''
-                                stash name: 'rest-results', includes: 'results-rest.xml'
+                            '''
                         }
                     }
                 }
             }
         }
         stage('Results') {
-            agent { label 'linux' }
             steps {
-                echo "=== AGENT ==="
-                sh 'whoami && hostname'
-                echo WORKSPACE
-
-                unstash name: 'unit-results'
-                unstash name: 'rest-results'
-
-                junit 'result-*.xml'
+                junit 'results-*.xml'
             }
         }
     }

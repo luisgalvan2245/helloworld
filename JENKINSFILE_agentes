@@ -82,7 +82,7 @@ pipeline {
                 unstash name: 'unit-results'
                 unstash name: 'rest-results'
 
-                junit 'result-*.xml'
+                junit 'results-*.xml'
             }
         }
     }
