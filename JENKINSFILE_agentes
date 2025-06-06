@@ -57,13 +57,17 @@ pipeline {
                             export PYTHONPATH=$WORKSPACE
                             export FLASK_APP=app/api.py
 
-                            # Start Flask app in the background and log output
+                            echo "Starting Flask app..."
                             nohup flask run >/dev/null 2>&1 &
 
+                            echo "Starting WireMock..."
                             nohup java -jar /usr/local/bin/wiremock-standalone-3.13.0.jar --port 9090 \
                             --root-dir test/wiremock > wiremock.log 2>&1 &
 
-                            sleep 10
+                            timeout 30 sh -c '
+                                while ! nc -z localhost 5000; do echo "Waiting for Flask..."; sleep 1; done
+                                while ! nc -z localhost 9090; do echo "Waiting for WireMock..."; sleep 1; done
+                            '
 
                             pytest --junitxml=results-rest.xml test/rest
                         '''
