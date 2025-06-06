@@ -51,12 +51,6 @@ pipeline {
             }
         }
 
-        stage('Results') {
-            steps {
-                junit 'results-*.xml'
-            }
-        }
-
         stage('Static') {
             steps {
                 sh '''
