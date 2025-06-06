@@ -19,16 +19,6 @@ pipeline {
                 stash name: 'code', includes: '**'
             }
         }
-        stage('Build') {
-            agent { label 'linux' }
-            steps {
-                echo "=== AGENT ==="
-                sh 'whoami && hostname'
-                echo WORKSPACE
-
-                echo 'Building app'
-            }
-        }
         stage('Tests') {
             parallel {
                 stage('Unit') {
@@ -39,7 +29,7 @@ pipeline {
                             sh 'whoami && hostname'
                             echo WORKSPACE
 
-                            unstash 'code'
+                            unstash name: 'code'
                             sh '''
                                 export PYTHONPATH=$WORKSPACE
                                 pytest -q --junitxml=results-unit.xml test/unit
@@ -57,7 +47,7 @@ pipeline {
                             sh 'whoami && hostname'
                             echo WORKSPACE
 
-                            unstash 'code'
+                            unstash name: 'code'
                             sh '''
                                 export PYTHONPATH=$WORKSPACE
                                 export FLASK_APP=app/api.py
@@ -89,8 +79,8 @@ pipeline {
                 sh 'whoami && hostname'
                 echo WORKSPACE
 
-                unstash 'unit-results'
-                unstash 'rest-results'
+                unstash name: 'unit-results'
+                unstash name: 'rest-results'
 
                 junit 'result-*.xml'
             }
